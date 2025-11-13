@@ -124,7 +124,7 @@ class invitation_manager {
                 } else {
                     // Create unique token for invitation.
                     do {
-                        $token = uniqid();
+                        $token = bin2hex(random_bytes(16));
                         $existingtoken = $DB->get_record('enrol_invitation', ['token' => $token]);
                     } while (!empty($existingtoken));
                 }
