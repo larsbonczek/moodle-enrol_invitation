@@ -31,6 +31,15 @@ defined('MOODLE_INTERNAL') || die();
 if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_heading('enrol_invitation_settings', '', get_string('pluginname_desc', 'enrol_invitation')));
 
+    $settings->add(
+        new admin_setting_configcheckbox(
+            'enrol_invitation/allowmismatchingemails',
+            get_string('allowmismatchingemails', 'enrol_invitation'),
+            get_string('allowmismatchingemails_desc', 'enrol_invitation'),
+            0
+        )
+    );
+
     // Enrol instance defaults.
     $settings->add(
         new admin_setting_heading(
