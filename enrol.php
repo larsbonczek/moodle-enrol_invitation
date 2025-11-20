@@ -74,18 +74,15 @@ if ($reject) {
     $invitation->errormsg = '';
     if (isloggedin() && !isguestuser()) { // Logged-in.
         // Ensure that this is the expected user.
-        if (
-            (empty($invitation->userid) && strtolower($invitation->email) == strtolower($USER->email))
-            || (!empty($invitation->userid) && $invitation->userid == $USER->id)
-        ) {
-            // Allow rejection if either the user did not have an account at the time of invitation (userid=null) but email
-            // addresses match, OR if the user's ID matches the one in the invitation. Prevent users from swapping email addresses.
-            $userid = $USER->id;
-        } else if (empty($userid) && strtolower($invitation->email) != strtolower($USER->email)) {
+        if (!empty($invitation->userid) && $invitation->userid != $USER->id) {
+            // If the userid does not match the current USER id, invitation was sent to a user with a different userid.
+            $invitation->errormsg = 'user account id mismatch';
+        } else if (empty($invitation->userid) && strtolower($invitation->email) != strtolower($USER->email) &&
+            !get_config('enrol_invitation', 'allowmismatchingemails')) {
             // User had no account at the time of invitation which is fine but mail addresses do not match.
             $invitation->errormsg = 'email does not match';
-        } else { // If the userid does not match the current USER id, invitation was sent to a user with a different userid.
-            $invitation->errormsg = 'user account id mismatch';
+        } else {
+            $userid = $USER->id;
         }
     } else if (!empty($invitation->userid)) { // Logged-out or guest and expecting a specific user account.
         // Rejecting this invitation requires that user be logged in.
@@ -153,11 +150,13 @@ if ($reject) {
 require_login(null, false);
 
 // We allow invitation acceptance by logged-in users only. Acceptance request will be rejected if a userid is set and they don't
-// match or if the email address does not match. If a user created account since invitation, the userid will not match but email
-// address should. This will also ensure that 2 user accounts did not swap email addresses.
+// match or if the email address does not match (unless enrol_invitation/allowmismatchingemails setting is active).
+// If a user created account since invitation, the userid will not match but email address should.
+// This will also ensure that 2 user accounts did not swap email addresses.
+$matchingemail = strtolower($invitation->email) == strtolower($USER->email);
 if (
-    (empty($invitation->userid) && strtolower($invitation->email) == strtolower($USER->email))
-    || $invitation->userid == $USER->id
+    $invitation->userid == $USER->id ||
+    (empty($invitation->userid) && ($matchingemail || get_config('enrol_invitation', 'allowmismatchingemails')))
 ) {
     $userid = $USER->id;
 } else {
@@ -222,7 +221,9 @@ if (!$invitation->userid && isguestuser()) {
 // Have invitee confirm their acceptance of the site invitation.
 $confirm = optional_param('confirm', 0, PARAM_BOOL);
 
-if ($instance->customint6 == 1 && empty($confirm)) {
+// Confirmation is always required if the invitation was sent to unregistered user and email is not matching.
+$confirmationrequired = $instance->customint6 == 1 || (empty($invitation->userid) && !$matchingemail);
+if ($confirmationrequired && empty($confirm)) {
     // User has not yet confirmed their acceptance.
 
     echo $OUTPUT->header();
@@ -239,6 +240,15 @@ if ($instance->customint6 == 1 && empty($confirm)) {
     $noticeobject = preparenoticeobject($invitation);
 
     $invitationacceptance = get_string('invitationacceptance', 'enrol_invitation', $noticeobject);
+
+    // Give notice if invitation was sent to unregistered user and email is not matching.
+    if (empty($invitation->userid) && !$matchingemail) {
+        $invitationacceptance .= html_writer::tag(
+            'p',
+            get_string('mismatchingemail_notice', 'enrol_invitation'),
+            ['class' => 'text-danger']
+        );
+    }
 
     // If invitation has "daysexpire" set, then give notice.
     if (!empty($invitation->daysexpire)) {
