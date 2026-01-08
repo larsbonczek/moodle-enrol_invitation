@@ -47,11 +47,13 @@ $invitation = $DB->get_record('enrol_invitation', ['token' => $enrolinvitationto
 if ((empty($invitation) || empty($invitation->courseid) || $invitation->timeexpiration < time())) {
     $courseid = empty($invitation->courseid) ? $SITE->id : $invitation->courseid;
     $invitationn = $DB->get_record('enrol_invitation', ['token' => $enrolinvitationtoken]);
-    $invitationn->errormsg = 'expired';
-    if ($reject && $invitation->timeexpiration < time()) {
-        \enrol_invitation\event\invitation_rejected::create_from_invitation($invitationn)->trigger();
-    } else {
-        \enrol_invitation\event\invitation_accepted::create_from_invitation($invitationn)->trigger();
+    if ($invitationn) {
+        $invitationn->errormsg = 'expired';
+        if ($reject && $invitation->timeexpiration < time()) {
+            \enrol_invitation\event\invitation_rejected::create_from_invitation($invitationn)->trigger();
+        } else {
+            \enrol_invitation\event\invitation_accepted::create_from_invitation($invitationn)->trigger();
+        }
     }
     $pagetitle = get_string('status_invite_expired', 'enrol_invitation');
     $PAGE->set_context(context_system::instance());
