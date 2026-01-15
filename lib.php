@@ -129,7 +129,7 @@ class enrol_invitation_plugin extends enrol_plugin {
         $fields['customint4'] = 0;
         $fields['customint5'] = 0;
         $fields['customint6'] = 0;
-        $fields['customchar1'] = get_string('default_subject', 'enrol_invitation', getcoursesubject($course));
+        $fields['customchar1'] = '';
         $fields['customtext1'] = '';
 
         return $fields;
@@ -143,6 +143,7 @@ class enrol_invitation_plugin extends enrol_plugin {
      */
     public function add_default_instance($course) {
         $fields = $this->get_instance_defaults();
+        $fields['customchar1'] = get_string('default_subject', 'enrol_invitation', getcoursesubject($course));
 
         return $this->add_instance($course, $fields);
     }
